@@ -12,7 +12,11 @@ cimaclub = f"https://www.cima-club.cc:{port}/"
 def get_multiple_download_links(url_list: list):
     L = []
     for i in url_list:
-        L.append(get_download_links(i))
+        print("calling get_download_links for ",url_list.index(i)," ",type(i))
+        try:
+            L.append(get_download_links(i))
+        except RuntimeError:
+            L.append(None)
     return L
 
 
@@ -104,20 +108,26 @@ def search(title: str, movie_or_series: Type):
             f"please choose the episodes to download (firstEpisode-lastEpisode): (1-{len(episodes)}) : ")
         if chosen_episode.isnumeric():
             assert 0 < int(chosen_episode) <= len(episodes)
-            a = episodes[chosen_episode - 1]
+            a = episodes[int(chosen_episode) - 1]
             if a is not None:
                 a = a.replace("episode", "watch")
+
         else:
             assert "-" in chosen_episode and len(chosen_episode.split("-")) == 2
             episode1 = chosen_episode.split("-")[0]
             episode2 = chosen_episode.split("-")[1]
             assert episode1.isnumeric() and episode2.isnumeric() and 0 < int(episode1) <= len(episodes) and 0 < int(
                 episode2) <= len(episodes) and int(episode1) <= int(episode2)
-            a = episodes[int(episode1) - 1:int(episode2) - 1]
-            print(a)
-            return a
+            a = episodes[int(episode1) - 1:int(episode2)]
+        print(a)
+        return a
 
-
+def beautify_multiple_download_links(links:list):
+    L = []
+    for i in links:
+        if i is not None:
+            L.append(beautify_download_links(i))
+    return L
 def beautify_download_links(links: list):
     quality_link = {}
     counter = 1
@@ -133,7 +143,9 @@ def beautify_download_links(links: list):
         #     counter += 1
     return quality_link
 
-
+def choose_quality_for_multiple_download(links:list):
+    for i in links:
+        choose_quality(i)
 def choose_quality(links: dict):
     print("available qualities : ", end="")
     for i in links.keys():
@@ -148,14 +160,17 @@ def choose_quality(links: dict):
 
 
 def main():
+    # now you need to add a beautify_multiple_download_links and handle errors
     title = input("please enter the title you are looking for : ")
     print("(1) movie\n(2) series")
     choice = int(input("enter the type : "))
     assert choice == 1 or choice == 2
     type = Type.movie if choice == 1 else Type.series
     link = search(title, type)
-    links_dict = beautify_download_links(get_download_links(link))
-    choose_quality(links_dict)
+    download_links = get_multiple_download_links(link)
+    print(download_links)
+    links_dict = beautify_multiple_download_links(download_links)
+    choose_quality_for_multiple_download(links_dict)
     ##there is a pb with movies; i looked for young with type 1 and returned series 
 
 
