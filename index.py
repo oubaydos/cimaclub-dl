@@ -90,20 +90,49 @@ def search(title: str, movie_or_series: Type):
                 print(i)
         # add the option to get the whole season
         chosen_episode = int(input(f"please choose an episode : (1-{len(episodes)}) : "))
-        assert 0 < chosen_episode < len(episodes)
+        assert 0 < chosen_episode <= len(episodes)
         a = episodes[chosen_episode-1]
         if a is not None:
             a = a.replace("episode", "watch")
     print(a)
     return a
 
+def beautify_download_links(links: list):
+    quality_link = {}
+    counter = 1
+    for i in links:
+        if "aac-480" in i:
+            quality_link["480"] = i
+        elif "aac-720" in i:
+            quality_link["720"] = i
+        elif "aac-1080" in i:
+            quality_link["1080"] = i
+        # elif any(char.isdigit() for char in i) or "cimaclub" in i.lower():
+        #     quality_link["other quality " + str(counter)] = i
+        #     counter += 1
+    return quality_link
 
+def choose_quality(links: dict):
+    print("available qualities : ", end="")
+    for i in links.keys():
+        print(i, end=", ")
+    print()
+    quality = str(input("please choose a quality : "))
+    if quality in links.keys():
+        print(links[quality])
+    else:
+        print("quality not found!!")
+        choose_quality(links)
+        
 def main():
-    link = search("family guy",Type.series)
-    print(get_download_links(link))
-    # print(get_episodes_links(
-    #     "https://www.cima-club.cc:2096/season/%D9%85%D8%B3%D9%84%D8%B3%D9%84-fbi:-most-wanted-%D9%85%D9%88%D8%B3%D9%85-3"))
-
+    title = input("please enter the title you are looking for : ")
+    print("(1) movie\n(2) series")
+    choice = int(input("enter the type : "))
+    assert choice == 1 or choice == 2
+    type = Type.movie if choice == 1 else Type.series
+    link = search(title, type)
+    links_dict = beautify_download_links(get_download_links(link))
+    choose_quality(links_dict)
 
 if __name__ == "__main__":
     main()
