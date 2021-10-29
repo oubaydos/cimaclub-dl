@@ -21,4 +21,4 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(stdout_handler)
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)

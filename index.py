@@ -2,6 +2,7 @@ import enum
 from logger import logging
 from bs4 import BeautifulSoup
 import requests
+import re
 
 port = "2096"
 cimaclub = f"https://www.cima-club.cc:{port}/"
@@ -64,6 +65,16 @@ def get_episodes_links(season_link: str):
     return episodes_links
 
 
+def extract_season_number(season_title: str):
+    match = re.search(r"موسم [0-9]+", season_title)
+    if not bool(match):
+        return season_title
+        ## i didnt want to return None
+    if match.group().split()[1].isdigit():
+        return match.group().split()[1]
+    return match.group()
+
+
 def search(title: str, movie_or_series: Type):
     search_result = BeautifulSoup(requests.get(cimaclub + "search", params={"s": title}).text, 'html.parser')
     links = []
@@ -78,7 +89,20 @@ def search(title: str, movie_or_series: Type):
             # changed and ("series" in a["href"] or 'season' in a["href"]) to that
             links.append(a["href"])
             titles.append(a.text)
+            # logging.debug(extract_season_number(a.text))
+            # now sort the links
     assert len(links) == len(titles)
+
+    #####
+    links_dict = dict()
+    for i in range(len(titles)):
+        links_dict[titles[i]]=links[i]
+    sort_links = dict(sorted(links_dict.items(),key=lambda x:extract_season_number(x[0]),reverse=False))
+    links = list(sort_links.values())
+    titles = list(sort_links.keys())
+    # print("hello world")
+    # print(sort_links)
+    #####
     for i in range(len(titles)):
         logging.info(f"{titles[i]} : ({i + 1})")
     chosen = int(input("please choose a title : ")) - 1
