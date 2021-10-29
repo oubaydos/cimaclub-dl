@@ -16,15 +16,18 @@ def get_download_links(url: str):
     content = BeautifulSoup(response.text, "html.parser")
     downloads_links = content.select_one('div[class*="downloads"]')
     if downloads_links is None:
-        raise RuntimeError("downloads section not found")
+        logging.error("downloads section not found, please choose a different episode/movie to download")
+        logging.error("to exit please click ctrl+c")
+        raise RuntimeError()
     download_link = ""
-    # print(downloads_links.findChildren("a")[0]["href"])
     for i in downloads_links.findChildren("a"):
         if "gvid" in i["href"] or "govid" in i["href"]:
             download_link = i["href"]
             break
     if download_link == "":
-        raise RuntimeError("download link not found")  # gvid links not found
+        logging.error("download link not found, please choose a different episode/movie to download")
+        logging.error("to exit please click ctrl+c")
+        raise RuntimeError()  # gvid links not found
     req = requests.get(download_link)
     if not str(req.status_code).startswith("2"):
         logging.error("govid server is unreachable")
@@ -71,15 +74,17 @@ def search(title: str, movie_or_series: Type):
         if movie_or_series == Type.movie and "series" not in a["href"] and 'season' not in a["href"]:
             links.append(a["href"])
             titles.append(a.text)
-        elif movie_or_series == Type.series and ("series" in a["href"] or 'season' in a["href"]):
+        elif movie_or_series == Type.series and 'season' in a["href"]:
+            # changed and ("series" in a["href"] or 'season' in a["href"]) to that
             links.append(a["href"])
             titles.append(a.text)
-    # print(links,titles,sep='\n')
     assert len(links) == len(titles)
     for i in range(len(titles)):
-        print(f"({titles[i]} : ({i + 1})")
+        logging.info(f"{titles[i]} : ({i + 1})")
     chosen = int(input("please choose a title : ")) - 1
-    assert 0 <= chosen < len(titles)
+    while not (0 <= chosen < len(titles)):
+        logging.error(f"the episode number must be between 1 and {len(titles)}")
+        chosen = int(input("please choose a title : ")) - 1
     a = links[chosen]
     if movie_or_series == Type.movie:
         a = a.replace("film", "watch")
@@ -87,52 +92,61 @@ def search(title: str, movie_or_series: Type):
         episodes = get_episodes_links(a)
         for i in episodes:
             if i is not None:
-                print(i)
+                logging.info(i)
         # add the option to get the whole season
         chosen_episode = int(input(f"please choose an episode : (1-{len(episodes)}) : "))
-        assert 0 < chosen_episode <= len(episodes)
-        a = episodes[chosen_episode-1]
+        while not (0 < chosen_episode <= len(episodes)):
+            logging.error(f"the chosen must be between 1 and {len(episodes)}")
+            chosen_episode = int(input(f"please choose an episode : (1-{len(episodes)}) : "))
+        a = episodes[chosen_episode - 1]
         if a is not None:
             a = a.replace("episode", "watch")
-    print(a)
+    logging.debug(a)
     return a
 
+
 def beautify_download_links(links: list):
+    logging.debug("hekeeeeeeeeelo" + ''.join(str(e) for e in links))
     quality_link = {}
-    counter = 1
     for i in links:
-        if "aac-480" in i:
+        if "-240" in i:
+            quality_link["240"] = i
+        elif "-360" in i:
+            quality_link["360"] = i
+        elif "-480" in i:
             quality_link["480"] = i
-        elif "aac-720" in i:
+        elif "-720" in i:
             quality_link["720"] = i
-        elif "aac-1080" in i:
+        elif "-1080" in i:  # aac-1080
             quality_link["1080"] = i
-        # elif any(char.isdigit() for char in i) or "cimaclub" in i.lower():
-        #     quality_link["other quality " + str(counter)] = i
-        #     counter += 1
     return quality_link
 
+
 def choose_quality(links: dict):
-    print("available qualities : ", end="")
-    for i in links.keys():
-        print(i, end=", ")
-    print()
+    logging.info("available qualities : " + ', '.join([str(elem) for elem in links.keys()]))
     quality = str(input("please choose a quality : "))
     if quality in links.keys():
-        print(links[quality])
+        logging.info(links[quality])
     else:
-        print("quality not found!!")
+        logging.info("quality not found!!")
         choose_quality(links)
-        
+
+
 def main():
     title = input("please enter the title you are looking for : ")
-    print("(1) movie\n(2) series")
+    logging.info("(1) movie\n(2) series")
     choice = int(input("enter the type : "))
-    assert choice == 1 or choice == 2
+    while not (choice == 1 or choice == 2):
+        logging.error(f"the choice is 1 or 2 -_-")
+        choice = int(input("enter the type : "))
     type = Type.movie if choice == 1 else Type.series
     link = search(title, type)
     links_dict = beautify_download_links(get_download_links(link))
     choose_quality(links_dict)
+    # there is a mix between films and movies
+    # there is a pb when selecting a series and not a season
+    # for now i will be hiding the option to access a series ( you will still have the access to seasons )
+
 
 if __name__ == "__main__":
     main()
