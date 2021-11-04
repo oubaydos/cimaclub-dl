@@ -96,8 +96,8 @@ def search(title: str, movie_or_series: Type):
     #####
     links_dict = dict()
     for i in range(len(titles)):
-        links_dict[titles[i]]=links[i]
-    sort_links = dict(sorted(links_dict.items(),key=lambda x:extract_season_number(x[0]),reverse=False))
+        links_dict[titles[i]] = links[i]
+    sort_links = dict(sorted(links_dict.items(), key=lambda x: extract_season_number(x[0]), reverse=False))
     links = list(sort_links.values())
     titles = list(sort_links.keys())
     # print("hello world")
@@ -118,7 +118,13 @@ def search(title: str, movie_or_series: Type):
             if i is not None:
                 logging.info(i)
         # add the option to get the whole season
-        chosen_episode = int(input(f"please choose an episode : (1-{len(episodes)}) : "))
+        chosen_episode = input(f"please choose an episode : (1-{len(episodes)}) or 'all': ")
+        if chosen_episode == "all":
+            for i in range(len(episodes)):
+                if episodes[i] is not None:
+                    episodes[i] = episodes[i].replace("episode", "watch")
+            return episodes
+        chosen_episode = int(chosen_episode)
         while not (0 < chosen_episode <= len(episodes)):
             logging.error(f"the chosen must be between 1 and {len(episodes)}")
             chosen_episode = int(input(f"please choose an episode : (1-{len(episodes)}) : "))
@@ -156,6 +162,17 @@ def choose_quality(links: dict):
         choose_quality(links)
 
 
+def choose_multiple_quality(qualities: set, links_list: list):
+    logging.info("available qualities : " + ', '.join([str(elem) for elem in qualities]))
+    quality = str(input("please choose a quality : "))
+    if quality in qualities:
+        for links in links_list:
+            logging.info(links[quality])
+    else:
+        logging.info("quality not found!!")
+        choose_multiple_quality(qualities, links_list)
+
+
 def main():
     title = input("please enter the title you are looking for : ")
     logging.info("(1) movie\n(2) series")
@@ -165,6 +182,16 @@ def main():
         choice = int(input("enter the type : "))
     type = Type.movie if choice == 1 else Type.series
     link = search(title, type)
+
+    if isinstance(link, list):
+        download_links = []
+        qualities = []
+        for i in range(len(link)):
+            links = beautify_download_links(get_download_links(link[i]))
+            download_links.append(links)
+            qualities.append(list(links.keys()))
+        choose_multiple_quality(set.intersection(*map(set, qualities)),download_links)
+        return
     links_dict = beautify_download_links(get_download_links(link))
     choose_quality(links_dict)
     # there is a mix between films and movies
