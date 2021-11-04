@@ -162,15 +162,25 @@ def choose_quality(links: dict):
         choose_quality(links)
 
 
-def choose_multiple_quality(qualities: set, links_list: list):
+def save_in_txt(quality, links_list, title):
+    title_with_underscore = (title.rstrip().replace(" ", "_")) + ".txt"
+    file = open(title_with_underscore, "w")
+    for links in links_list:
+        file.write(links[quality])
+
+
+def choose_multiple_quality(qualities: set, links_list: list, title: str):
     logging.info("available qualities : " + ', '.join([str(elem) for elem in qualities]))
     quality = str(input("please choose a quality : "))
     if quality in qualities:
+        store_in_txt = input("do you wish links to be stored in a txt file ? (y/n) : ")
+        if store_in_txt == "y":
+            save_in_txt(quality, links_list, title)
         for links in links_list:
             logging.info(links[quality])
     else:
         logging.info("quality not found!!")
-        choose_multiple_quality(qualities, links_list)
+        choose_multiple_quality(qualities, links_list, title)
 
 
 def main():
@@ -190,7 +200,7 @@ def main():
             links = beautify_download_links(get_download_links(link[i]))
             download_links.append(links)
             qualities.append(list(links.keys()))
-        choose_multiple_quality(set.intersection(*map(set, qualities)),download_links)
+        choose_multiple_quality(set.intersection(*map(set, qualities)), download_links, title)
         return
     links_dict = beautify_download_links(get_download_links(link))
     choose_quality(links_dict)
