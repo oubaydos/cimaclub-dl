@@ -1,8 +1,11 @@
 import enum
+import time
+
 from logger import logging
 from bs4 import BeautifulSoup
 import requests
 import re
+import webbrowser
 
 port = "2096"
 cimaclub = f"https://www.cima-club.cc:{port}/"
@@ -152,11 +155,19 @@ def beautify_download_links(links: list):
     return quality_link
 
 
+def open_browser_with_link(quality: str, links: list):
+    choix = input("do you wish to open these links in the default browser to start downloading ? (y)/(n)")
+    if choix.lower() == "y":
+        for i in links:
+            webbrowser.open_new(i[quality])
+
+
 def choose_quality(links: dict):
     logging.info("available qualities : " + ', '.join([str(elem) for elem in links.keys()]))
     quality = str(input("please choose a quality : "))
     if quality in links.keys():
         logging.info(links[quality])
+        open_browser_with_link(quality, [links])
     else:
         logging.info("quality not found!!")
         choose_quality(links)
@@ -178,6 +189,7 @@ def choose_multiple_quality(qualities: set, links_list: list, title: str):
             save_in_txt(quality, links_list, title)
         for links in links_list:
             logging.info(links[quality])
+        open_browser_with_link(quality, links_list)
     else:
         logging.info("quality not found!!")
         choose_multiple_quality(qualities, links_list, title)
@@ -201,6 +213,7 @@ def main():
             download_links.append(links)
             qualities.append(list(links.keys()))
         choose_multiple_quality(set.intersection(*map(set, qualities)), download_links, title)
+
         return
     links_dict = beautify_download_links(get_download_links(link))
     choose_quality(links_dict)
@@ -211,3 +224,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# add the option to download with the best quality avalaible
