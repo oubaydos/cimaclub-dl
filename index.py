@@ -1,8 +1,11 @@
 import enum
+import time
+
 from logger import logging
 from bs4 import BeautifulSoup
 import requests
 import re
+import webbrowser
 
 port = "2096"
 cimaclub = f"https://www.cima-club.cc:{port}/"
@@ -104,19 +107,19 @@ def search(title: str, movie_or_series: Type):
     # print(sort_links)
     #####
     for i in range(len(titles)):
-        logging.info(f"{titles[i]} : ({i + 1})")
+        print(f"{titles[i]} : ({i + 1})")
     chosen = int(input("please choose a title : ")) - 1
     while not (0 <= chosen < len(titles)):
-        logging.error(f"the episode number must be between 1 and {len(titles)}")
+        print("err :::::: "+f"the episode number must be between 1 and {len(titles)}")
         chosen = int(input("please choose a title : ")) - 1
     a = links[chosen]
     if movie_or_series == Type.movie:
         a = a.replace("film", "watch")
     elif 'season' in a:
         episodes = get_episodes_links(a)
-        for i in episodes:
-            if i is not None:
-                logging.info(i)
+        # for i in episodes:
+        #     if i is not None:
+        #         print(i)
         # add the option to get the whole season
         chosen_episode = input(f"please choose an episode : (1-{len(episodes)}) or 'all': ")
         if chosen_episode == "all":
@@ -126,7 +129,7 @@ def search(title: str, movie_or_series: Type):
             return episodes
         chosen_episode = int(chosen_episode)
         while not (0 < chosen_episode <= len(episodes)):
-            logging.error(f"the chosen must be between 1 and {len(episodes)}")
+            print("err :::::: "+f"the chosen must be between 1 and {len(episodes)}")
             chosen_episode = int(input(f"please choose an episode : (1-{len(episodes)}) : "))
         a = episodes[chosen_episode - 1]
         if a is not None:
@@ -153,13 +156,20 @@ def beautify_download_links(links: list):
 
 
 def choose_quality(links: dict):
-    logging.info("available qualities : " + ', '.join([str(elem) for elem in links.keys()]))
+    print("available qualities : " + ', '.join([str(elem) for elem in links.keys()]))
     quality = str(input("please choose a quality : "))
     if quality in links.keys():
-        logging.info(links[quality])
+        print(links[quality])
     else:
-        logging.info("quality not found!!")
+        print("quality not found!!")
         choose_quality(links)
+
+
+def open_browser_with_link(quality: str, links: list):
+    choix = input("do you wish to open these links in the default browser to start downloading ? (y)/(n)")
+    if choix.lower() == "y":
+        for i in links:
+            webbrowser.open_new(i[quality])
 
 
 def save_in_txt(quality, links_list, title):
@@ -170,25 +180,26 @@ def save_in_txt(quality, links_list, title):
 
 
 def choose_multiple_quality(qualities: set, links_list: list, title: str):
-    logging.info("available qualities : " + ', '.join([str(elem) for elem in qualities]))
+    print("available qualities : " + ', '.join([str(elem) for elem in qualities]))
     quality = str(input("please choose a quality : "))
     if quality in qualities:
         store_in_txt = input("do you wish links to be stored in a txt file ? (y/n) : ")
         if store_in_txt == "y":
             save_in_txt(quality, links_list, title)
         for links in links_list:
-            logging.info(links[quality])
+            print(links[quality])
+        open_browser_with_link(quality, links_list)
     else:
-        logging.info("quality not found!!")
+        print("quality not found!!")
         choose_multiple_quality(qualities, links_list, title)
 
 
 def main():
     title = input("please enter the title you are looking for : ")
-    logging.info("(1) movie\n(2) series")
+    print("(1) movie\n(2) series")
     choice = int(input("enter the type : "))
     while not (choice == 1 or choice == 2):
-        logging.error(f"the choice is 1 or 2 -_-")
+        print("err :::::: "+f"the choice is 1 or 2 -_-")
         choice = int(input("enter the type : "))
     type = Type.movie if choice == 1 else Type.series
     link = search(title, type)
@@ -201,6 +212,7 @@ def main():
             download_links.append(links)
             qualities.append(list(links.keys()))
         choose_multiple_quality(set.intersection(*map(set, qualities)), download_links, title)
+
         return
     links_dict = beautify_download_links(get_download_links(link))
     choose_quality(links_dict)
@@ -211,3 +223,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# add the option to download with the best quality avalaible
