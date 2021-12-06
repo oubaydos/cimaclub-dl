@@ -156,7 +156,7 @@ def beautify_download_links(links: list):
 
 def choose_quality(links: dict):
     print("available qualities : " + ', '.join([str(elem) for elem in links.keys()]))
-    quality = str(input("please choose a quality : "))
+    quality = str(input("please choose a quality :"))
     if quality in links.keys():
         print(links[quality])
     else:
@@ -164,30 +164,57 @@ def choose_quality(links: dict):
         choose_quality(links)
 
 
-def open_browser_with_link(quality: str, links: list):
+def open_browser_with_link(quality: list, links: list):
     choix = input("do you wish to open these links in the default browser to start downloading ? (y)/(n)")
     if choix.lower() == "y":
-        for i in links:
-            webbrowser.open_new(i[quality])
+        if len(quality) == 1:
+            for i in links:
+                webbrowser.open_new(i[quality])
+        else :
+            counter = 0
+            for i in links:
+                webbrowser.open_new(i[quality[counter]])
+                counter += 1
+
+
+def best_quality_link(links: dict):
+    L = []
+    for i in links.keys():
+        if str(i).isnumeric():
+            L.append(int(i))
+    return str(max(L))
 
 
 def save_in_txt(quality, links_list, title):
     title_with_underscore = (title.rstrip().replace(" ", "_")) + ".txt"
     file = open(title_with_underscore, "w")
-    for links in links_list:
-        file.write(links[quality])
+    if quality == 'best':
+        for links in links_list:
+            file.write(best_quality_link(links))
+    else:
+        for links in links_list:
+            file.write(links[quality])
 
 
 def choose_multiple_quality(qualities: set, links_list: list, title: str):
     print("available qualities : " + ', '.join([str(elem) for elem in qualities]))
-    quality = str(input("please choose a quality : "))
-    if quality in qualities:
+    quality = str(input(
+        "please choose a quality (enter 'best' if you wish to choose the best quality available for each episode ) :"))
+    if quality == 'best' or quality in qualities:
         store_in_txt = input("do you wish links to be stored in a txt file ? (y/n) : ")
         if store_in_txt == "y":
             save_in_txt(quality, links_list, title)
-        for links in links_list:
-            print(links[quality])
-        open_browser_with_link(quality, links_list)
+        if quality == 'best':
+            L = []
+            for links in links_list:
+                temp = best_quality_link(links)
+                print(links[temp])
+                L.append(temp)
+            open_browser_with_link(L, links_list)
+        else :
+            for links in links_list:
+                print(links[quality])
+            open_browser_with_link([quality], links_list)
     else:
         print("quality not found!!")
         choose_multiple_quality(qualities, links_list, title)
