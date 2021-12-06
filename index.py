@@ -37,7 +37,6 @@ def get_download_links(url: str):
         logging.error("govid server is unreachable")
         return []
     download_page = BeautifulSoup(req.text, 'html.parser')
-
     L = []
     for i in download_page.find_all("a"):
         L.append(i["href"])
@@ -49,7 +48,6 @@ class Type(enum.Enum):
     series = 2
 
 
-# add a regex validation for season_link
 def get_episodes_links(season_link: str):
     if season_link.endswith("/"):
         season_link = season_link[:-1]
@@ -72,28 +70,39 @@ def extract_season_number(season_title: str):
     match = re.search(r"موسم [0-9]+", season_title)
     if not bool(match):
         return season_title
-        ## i didnt want to return None
     if match.group().split()[1].isdigit():
         return match.group().split()[1]
     return match.group()
+
+
+def generate_list_of_links_to_download(chosen_episode, episodes) -> list:
+    if chosen_episode == "all":
+        first_episode = 1
+        last_episode = len(episodes)
+    else:
+        string = chosen_episode.split("-")
+        first_episode = int(string[0])
+        last_episode = int(string[1])
+        if first_episode < 1 or last_episode > len(episodes):
+            raise RuntimeError("the fist episode must be > 1 and the last one must be within the range of the season")
+    for i in range(first_episode - 1, last_episode):
+        if episodes[i] is not None:
+            episodes[i] = episodes[i].replace("episode", "watch")
+    return episodes[first_episode - 1:last_episode]
 
 
 def search(title: str, movie_or_series: Type):
     search_result = BeautifulSoup(requests.get(cimaclub + "search", params={"s": title}).text, 'html.parser')
     links = []
     titles = []
-    # we will now handle only movies :
     for i in search_result.select('div[class*="media-block"] > div'):
         a = i.find_all('a')[-1]
         if movie_or_series == Type.movie and "series" not in a["href"] and 'season' not in a["href"]:
             links.append(a["href"])
             titles.append(a.text)
         elif movie_or_series == Type.series and 'season' in a["href"]:
-            # changed and ("series" in a["href"] or 'season' in a["href"]) to that
             links.append(a["href"])
             titles.append(a.text)
-            # logging.debug(extract_season_number(a.text))
-            # now sort the links
     assert len(links) == len(titles)
 
     #####
@@ -103,9 +112,6 @@ def search(title: str, movie_or_series: Type):
     sort_links = dict(sorted(links_dict.items(), key=lambda x: extract_season_number(x[0]), reverse=False))
     links = list(sort_links.values())
     titles = list(sort_links.keys())
-    # print("hello world")
-    # print(sort_links)
-    #####
     for i in range(len(titles)):
         print(f"{titles[i]} : ({i + 1})")
     chosen = int(input("please choose a title : ")) - 1
@@ -117,25 +123,10 @@ def search(title: str, movie_or_series: Type):
         a = a.replace("film", "watch")
     elif 'season' in a:
         episodes = get_episodes_links(a)
-        # for i in episodes:
-        #     if i is not None:
-        #         print(i)
-        # add the option to get the whole season
         chosen_episode = input(f"please choose an episode : (1-{len(episodes)}) or 'all': ")
-        # case of all episodes in one season
-        if chosen_episode == "all":
-            for i in range(len(episodes)):
-                if episodes[i] is not None:
-                    episodes[i] = episodes[i].replace("episode", "watch")
-            return episodes
-        if re.compile("^[1-9][1-9]*-[1-9][1-9]*$").match(chosen_episode):
-            string = chosen_episode.split("-")
-            first_episode = int(string[0])
-            last_episode = int(string[1])
-            for i in range(first_episode - 1, last_episode):
-                if episodes[i] is not None:
-                    episodes[i] = episodes[i].replace("episode", "watch")
-            return episodes[first_episode - 1:last_episode]
+        # case of all episodes in one season || multiple episodes
+        if chosen_episode == "all" or re.compile("^[1-9][1-9]*-[1-9][1-9]*$").match(chosen_episode):
+            return generate_list_of_links_to_download(chosen_episode, episodes)
         chosen_episode = int(chosen_episode)
         while not (0 < chosen_episode <= len(episodes)):
             print("err :::::: " + f"the chosen must be between 1 and {len(episodes)}")
