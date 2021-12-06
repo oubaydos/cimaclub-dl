@@ -110,7 +110,7 @@ def search(title: str, movie_or_series: Type):
         print(f"{titles[i]} : ({i + 1})")
     chosen = int(input("please choose a title : ")) - 1
     while not (0 <= chosen < len(titles)):
-        print("err :::::: "+f"the episode number must be between 1 and {len(titles)}")
+        print("err :::::: " + f"the episode number must be between 1 and {len(titles)}")
         chosen = int(input("please choose a title : ")) - 1
     a = links[chosen]
     if movie_or_series == Type.movie:
@@ -122,14 +122,23 @@ def search(title: str, movie_or_series: Type):
         #         print(i)
         # add the option to get the whole season
         chosen_episode = input(f"please choose an episode : (1-{len(episodes)}) or 'all': ")
+        # case of all episodes in one season
         if chosen_episode == "all":
             for i in range(len(episodes)):
                 if episodes[i] is not None:
                     episodes[i] = episodes[i].replace("episode", "watch")
             return episodes
+        if re.compile("^[1-9][1-9]*-[1-9][1-9]*$").match(chosen_episode):
+            string = chosen_episode.split("-")
+            first_episode = int(string[0])
+            last_episode = int(string[1])
+            for i in range(first_episode - 1, last_episode):
+                if episodes[i] is not None:
+                    episodes[i] = episodes[i].replace("episode", "watch")
+            return episodes[first_episode - 1:last_episode]
         chosen_episode = int(chosen_episode)
         while not (0 < chosen_episode <= len(episodes)):
-            print("err :::::: "+f"the chosen must be between 1 and {len(episodes)}")
+            print("err :::::: " + f"the chosen must be between 1 and {len(episodes)}")
             chosen_episode = int(input(f"please choose an episode : (1-{len(episodes)}) : "))
         a = episodes[chosen_episode - 1]
         if a is not None:
@@ -139,7 +148,6 @@ def search(title: str, movie_or_series: Type):
 
 
 def beautify_download_links(links: list):
-    logging.debug("hekeeeeeeeeelo" + ''.join(str(e) for e in links))
     quality_link = {}
     for i in links:
         if "-240" in i:
@@ -199,7 +207,7 @@ def main():
     print("(1) movie\n(2) series")
     choice = int(input("enter the type : "))
     while not (choice == 1 or choice == 2):
-        print("err :::::: "+f"the choice is 1 or 2 -_-")
+        print("err :::::: " + f"the choice is 1 or 2 -_-")
         choice = int(input("enter the type : "))
     type = Type.movie if choice == 1 else Type.series
     link = search(title, type)
