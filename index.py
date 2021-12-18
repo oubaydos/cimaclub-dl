@@ -151,6 +151,8 @@ def beautify_download_links(links: list):
             quality_link["720"] = i
         elif "-1080" in i:  # aac-1080
             quality_link["1080"] = i
+    if list(quality_link.keys()) == []:
+        raise RuntimeError("no links found")
     return quality_link
 
 
@@ -167,11 +169,15 @@ def choose_quality(links: dict):
 def open_browser_with_link(quality: list, links: list):
     choix = input("do you wish to open these links in the default browser to start downloading ? (y)/(n)")
     if choix.lower() == "y":
+        logging.debug("opening browser")
         if len(quality) == 1:
+            logging.debug("opening with one quality")
             for i in links:
-                webbrowser.open_new(i[quality])
+                logging.debug("%s", i[quality[0]])
+                webbrowser.open_new(i[quality[0]])
         else :
             counter = 0
+            logging.debug("opening multiple qualities")
             for i in links:
                 webbrowser.open_new(i[quality[counter]])
                 counter += 1
@@ -190,7 +196,7 @@ def save_in_txt(quality, links_list, title):
     file = open(title_with_underscore, "w")
     if quality == 'best':
         for links in links_list:
-            file.write(best_quality_link(links))
+            file.write(links[best_quality_link(links)])
     else:
         for links in links_list:
             file.write(links[quality])
