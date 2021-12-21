@@ -1,4 +1,5 @@
 import enum
+import os
 import time
 
 from logger import logging
@@ -175,7 +176,7 @@ def open_browser_with_link(quality: list, links: list):
             for i in links:
                 logging.debug("%s", i[quality[0]])
                 webbrowser.open_new(i[quality[0]])
-        else :
+        else:
             counter = 0
             logging.debug("opening multiple qualities")
             for i in links:
@@ -193,6 +194,12 @@ def best_quality_link(links: dict):
 
 def save_in_txt(quality, links_list, title):
     title_with_underscore = (title.rstrip().replace(" ", "_")) + ".txt"
+    title_with_underscore = "./results/"+title_with_underscore
+    try:
+        os.makedirs("./results")
+    except FileExistsError:
+        # directory already exists
+        pass
     file = open(title_with_underscore, "w")
     if quality == 'best':
         for links in links_list:
@@ -217,7 +224,7 @@ def choose_multiple_quality(qualities: set, links_list: list, title: str):
                 print(links[temp])
                 L.append(temp)
             open_browser_with_link(L, links_list)
-        else :
+        else:
             for links in links_list:
                 print(links[quality])
             open_browser_with_link([quality], links_list)
@@ -256,4 +263,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# add the option to download with the best quality avalaible
+# add Dockerfile
