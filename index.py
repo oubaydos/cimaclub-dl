@@ -126,7 +126,8 @@ def search(title: str, movie_or_series: Type):
         episodes = get_episodes_links(a)
         chosen_episode = input(f"please choose an episode : (1-{len(episodes)}) or 'all': ")
         # case of all episodes in one season || multiple episodes
-        if chosen_episode == "all" or re.compile("^[1-9][1-9]*-[1-9][1-9]*$").match(chosen_episode):
+        logging.debug(f"chosen ep : {chosen_episode}--{bool(re.compile('[1-9]+-[1-9]+').match(chosen_episode))} ")
+        if chosen_episode == "all" or bool(re.compile('[1-9]+-[1-9]+').match(chosen_episode)):
             return generate_list_of_links_to_download(chosen_episode, episodes)
         chosen_episode = int(chosen_episode)
         while not (0 < chosen_episode <= len(episodes)):
