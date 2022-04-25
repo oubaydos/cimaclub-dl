@@ -33,7 +33,7 @@ def get_download_links(url: str):
         logging.error("download link not found, please choose a different episode/movie to download")
         logging.error("to exit please click ctrl+c")
         raise RuntimeError()  # gvid links not found
-    req = requests.get(download_link)
+    req = requests.get(download_link, headers={'referer':'https://cima-club.io/'})
     if not str(req.status_code).startswith("2"):
         logging.error("govid server is unreachable")
         return []
