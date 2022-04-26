@@ -9,8 +9,7 @@ import re
 import webbrowser
 
 port = "2096"
-cimaclub = f"https://www.cima-club.cc:{port}/"
-
+cimaclub = f"https://www.cima-club.io/"
 
 def get_download_links(url: str):
     """
