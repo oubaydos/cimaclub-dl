@@ -8,15 +8,30 @@ import requests
 import re
 import webbrowser
 
+http_proxy = os.getenv('HTTP_PROXY') if os.getenv('HTTP_PROXY') is not None else "http://10.23.201.11:3128"
+https_proxy = os.getenv('HTTPS_PROXY') if os.getenv('HTTPS_PROXY') is not None else "http://10.23.201.11:3128"
+ftp_proxy = os.getenv('FTP_PROXY') if os.getenv('FTP_PROXY') is not None else "ftp://10.23.201.11:3128"
+
+proxies = {
+    "http": http_proxy,
+    "https": https_proxy,
+    "ftp": ftp_proxy
+}
+
 port = "2096"
 cimaclub = f"https://www.cima-club.io/"
 
-def get_download_links(url: str):
+
+def get_download_links(url: str, with_proxy):
     """
+    :param with_proxy:
     :param url: the download link - should be in the form : https://www.cima-club.cc:..../watch/....
     :return: a list of the download links --> watch out, there will be other links in there
     """
-    response = requests.get(url)
+    if with_proxy:
+        response = requests.get(url,proxies=proxies)
+    else:
+        response = requests.get(url)
     content = BeautifulSoup(response.text, "html.parser")
     downloads_links = content.select_one('div[class*="downloads"]')
     if downloads_links is None:
@@ -32,7 +47,10 @@ def get_download_links(url: str):
         logging.error("download link not found, please choose a different episode/movie to download")
         logging.error("to exit please click ctrl+c")
         raise RuntimeError()  # gvid links not found
-    req = requests.get(download_link, headers={'referer':'https://cima-club.io/'})
+    if with_proxy:
+        req = requests.get(download_link, headers={'referer': 'https://cima-club.io/'}, proxies=proxies)
+    else :
+        req = requests.get(download_link, headers={'referer': 'https://cima-club.io/'})
     if not str(req.status_code).startswith("2"):
         logging.error("govid server is unreachable")
         return []
@@ -48,10 +66,14 @@ class Type(enum.Enum):
     series = 2
 
 
-def get_episodes_links(season_link: str):
+def get_episodes_links(season_link: str, with_proxy):
     if season_link.endswith("/"):
         season_link = season_link[:-1]
-    response = requests.get(season_link + "/episodes")
+    if with_proxy:
+        response = requests.get(season_link + "/episodes", proxies=proxies)
+    else :
+        response = requests.get(season_link + "/episodes")
+
     content = BeautifulSoup(response.text, "html.parser")
     episodes_div = content.select('div[class*="media-block"] > div[class="content-box"]')
     if len(episodes_div) == 0:
@@ -66,7 +88,7 @@ def get_episodes_links(season_link: str):
     return episodes_links
 
 
-def extract_season_number(season_title: str):
+def extract_season_number(season_title: str,with_proxy):
     match = re.search(r"موسم [0-9]+", season_title)
     if not bool(match):
         return season_title
@@ -91,8 +113,11 @@ def generate_list_of_links_to_download(chosen_episode, episodes) -> list:
     return episodes[first_episode - 1:last_episode]
 
 
-def search(title: str, movie_or_series: Type):
-    search_result = BeautifulSoup(requests.get(cimaclub + "search", params={"s": title}).text, 'html.parser')
+def search(title: str, movie_or_series: Type, with_proxy=False):
+    if with_proxy:
+        search_result = BeautifulSoup(requests.get(cimaclub + "search", params={"s": title}, proxies=proxies).text, 'html.parser')
+    else :
+        search_result = BeautifulSoup(requests.get(cimaclub + "search", params={"s": title}).text, 'html.parser')
     links = []
     titles = []
     for i in search_result.select('div[class*="media-block"] > div'):
@@ -109,7 +134,7 @@ def search(title: str, movie_or_series: Type):
     links_dict = dict()
     for i in range(len(titles)):
         links_dict[titles[i]] = links[i]
-    sort_links = dict(sorted(links_dict.items(), key=lambda x: extract_season_number(x[0]), reverse=False))
+    sort_links = dict(sorted(links_dict.items(), key=lambda x: extract_season_number(x[0],with_proxy), reverse=False))
     links = list(sort_links.values())
     titles = list(sort_links.keys())
     for i in range(len(titles)):
@@ -122,7 +147,7 @@ def search(title: str, movie_or_series: Type):
     if movie_or_series == Type.movie:
         a = a.replace("film", "watch")
     elif 'season' in a:
-        episodes = get_episodes_links(a)
+        episodes = get_episodes_links(a,with_proxy)
         chosen_episode = input(f"please choose an episode : (1-{len(episodes)}) or 'all': ")
         # case of all episodes in one season || multiple episodes
         logging.debug(f"chosen ep : {chosen_episode}--{bool(re.compile('[1-9]+-[1-9]+').match(chosen_episode))} ")
@@ -194,7 +219,7 @@ def best_quality_link(links: dict):
 
 def save_in_txt(quality, links_list, title):
     title_with_underscore = (title.rstrip().replace(" ", "_")) + ".txt"
-    title_with_underscore = "./results/"+title_with_underscore
+    title_with_underscore = "./results/" + title_with_underscore
     try:
         os.makedirs("./results")
     except FileExistsError:
@@ -234,6 +259,12 @@ def choose_multiple_quality(qualities: set, links_list: list, title: str):
 
 
 def main():
+    with_proxy = input("do you wish to use proxy ? (yes/no)")
+    if with_proxy == "yes":
+        with_proxy = True
+    else :
+        with_proxy = False
+
     title = input("please enter the title you are looking for : ")
     print("(1) movie\n(2) series")
     choice = int(input("enter the type : "))
@@ -241,19 +272,19 @@ def main():
         print("err :::::: " + f"the choice is 1 or 2 -_-")
         choice = int(input("enter the type : "))
     type = Type.movie if choice == 1 else Type.series
-    link = search(title, type)
+    link = search(title, type,with_proxy)
 
     if isinstance(link, list):
         download_links = []
         qualities = []
         for i in range(len(link)):
-            links = beautify_download_links(get_download_links(link[i]))
+            links = beautify_download_links(get_download_links(link[i],with_proxy))
             download_links.append(links)
             qualities.append(list(links.keys()))
         choose_multiple_quality(set.intersection(*map(set, qualities)), download_links, title)
 
         return
-    links_dict = beautify_download_links(get_download_links(link))
+    links_dict = beautify_download_links(get_download_links(link,with_proxy))
     choose_quality(links_dict)
     # there is a mix between films and movies
     # there is a pb when selecting a series and not a season
